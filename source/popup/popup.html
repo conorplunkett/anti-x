@@ -36,11 +36,21 @@
         links always keep working.
       </p>
 
+      <fieldset id="pro" disabled>
+        <h2>Pro <span class="badge" id="pro-badge">Coming soon</span></h2>
+        <label><input type="checkbox" id="proScheduledBlocking" /> Scheduled blocking (work hours only)</label>
+        <label><input type="checkbox" id="proKeywordMuting" /> Keyword / phrase muting</label>
+        <label><input type="checkbox" id="proCustomMessage" /> Custom blocked-screen message</label>
+        <label><input type="checkbox" id="proLocalStats" /> Local focus stats (never leaves your device)</label>
+        <a id="upgrade" class="upgrade" href="#" hidden>Upgrade to Pro</a>
+      </fieldset>
+
       <p id="status"></p>
     </main>
 
     <footer>
       <span>Changes save automatically. Settings stay on your device — no tracking.</span>
+      <a id="donate" href="#" target="_blank" rel="noopener">☕ Support this project</a>
     </footer>
 
     <script src="popup.js" type="module"></script>

@@ -13,6 +13,19 @@ export const defaultSettings = {
 
 export const settingsKeys = Object.keys(defaultSettings);
 
+// Pro state is stored separately from the blocking toggles so the free-tier
+// settings loop stays untouched. Flip this to true (or via a future license
+// check) to unlock the premium features stubbed in the popup.
+export const PRO_KEY = "isPro";
+
+export const loadPro = async () => {
+  const { [PRO_KEY]: isPro } = await chrome.storage.local.get(PRO_KEY);
+  return Boolean(isPro);
+};
+
+// Replace with your own donation link (Ko-fi, Buy Me a Coffee, GitHub Sponsors).
+export const DONATE_URL = "https://www.buymeacoffee.com/yourname";
+
 // X's class names are obfuscated; only data-testid / aria-label / role hooks
 // are reasonably stable. All selectors live here so DOM changes are a one-file fix.
 export const selectors = {
