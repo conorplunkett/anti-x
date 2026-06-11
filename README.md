@@ -31,6 +31,16 @@ blocking, daily feed budget, and a breathing-room countdown. Keyword muting is
 still a stub. Everything stays in `chrome.storage.local` — no payment provider
 or network calls are wired up yet (see the TODO in `source/popup/popup.js`).
 
+## Automated E2E test
+
+`test/` contains a harness that loads the real extension into headless
+Chromium against a local mock of X's DOM (same `data-testid`/`aria-label`
+structure as the live site), with `x.com` mapped to `127.0.0.1`. It covers
+the blocked home/explore screens, sidebar hiding, "Discover more" removal,
+and the untouched pass-through routes (14 checks). See the usage comment at
+the top of `test/e2e.mjs`. This validates the machinery end-to-end; the live
+site can still drift, so the manual checklist below remains the final gate.
+
 ## Manual QA checklist (PRD acceptance criteria)
 
 - [ ] Extension installs locally without errors
