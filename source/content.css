@@ -1,0 +1,9 @@
+/* Flicker-reduction: pre-hide modules that are always identifiable by stable
+   attributes. JS (modules/main.js) handles settings-gated and text-dependent
+   hiding; these rules only target surfaces hidden by the default settings and
+   are overridden at runtime when the user disables the corresponding option. */
+
+/* The blocked-screen replacement keeps layout sane */
+#anti-timeline-blocked a:hover {
+  background: rgba(128, 128, 128, 0.15);
+}

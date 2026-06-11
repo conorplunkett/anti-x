@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Anti-Timeline Options</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <img width="24" height="24" src="../public/at48.png" alt="" />
+      <h1>Anti-Timeline</h1>
+    </header>
+
+    <main>
+      <label class="master">
+        <input type="checkbox" id="enabled" />
+        <span>Extension enabled</span>
+      </label>
+
+      <fieldset id="options">
+        <h2>Block</h2>
+        <label><input type="checkbox" id="blockHomeTimeline" /> Block Home timeline</label>
+        <label><input type="checkbox" id="blockForYou" /> Block "For You" feed</label>
+        <label><input type="checkbox" id="allowFollowing" /> Allow "Following" feed</label>
+
+        <h2>Hide</h2>
+        <label><input type="checkbox" id="hideTrends" /> Hide Trends</label>
+        <label><input type="checkbox" id="hideExplore" /> Hide Explore</label>
+        <label><input type="checkbox" id="hideSuggestedAccounts" /> Hide suggested accounts</label>
+        <label><input type="checkbox" id="hideSuggestedPosts" /> Hide suggested posts</label>
+        <label><input type="checkbox" id="hideMorePosts" /> Hide "More posts" under tweets</label>
+      </fieldset>
+
+      <p class="note">
+        DMs, notifications, search, bookmarks, lists, profiles, and direct tweet
+        links always keep working.
+      </p>
+
+      <p id="status"></p>
+    </main>
+
+    <footer>
+      <span>Changes save automatically. Settings stay on your device — no tracking.</span>
+    </footer>
+
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>
