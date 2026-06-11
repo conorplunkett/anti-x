@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Anti-Timeline Options</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <img width="24" height="24" src="../public/at48.png" alt="" />
+      <h1>Anti-Timeline</h1>
+    </header>
+
+    <main>
+      <label class="master">
+        <input type="checkbox" id="enabled" />
+        <span>Extension enabled</span>
+      </label>
+
+      <fieldset id="options">
+        <h2>Block</h2>
+        <label><input type="checkbox" id="blockHomeTimeline" /> Block Home timeline</label>
+        <label><input type="checkbox" id="blockForYou" /> Block "For You" feed</label>
+        <label><input type="checkbox" id="allowFollowing" /> Allow "Following" feed</label>
+
+        <h2>Hide</h2>
+        <label><input type="checkbox" id="hideTrends" /> Hide Trends</label>
+        <label><input type="checkbox" id="hideExplore" /> Hide Explore</label>
+        <label><input type="checkbox" id="hideSuggestedAccounts" /> Hide suggested accounts</label>
+        <label><input type="checkbox" id="hideSuggestedPosts" /> Hide suggested posts</label>
+        <label><input type="checkbox" id="hideMorePosts" /> Hide "More posts" under tweets</label>
+      </fieldset>
+
+      <p class="note">
+        DMs, notifications, search, bookmarks, lists, profiles, and direct tweet
+        links always keep working.
+      </p>
+
+      <fieldset id="pro" disabled>
+        <h2>Pro <span class="badge" id="pro-badge">Coming soon</span></h2>
+        <label><input type="checkbox" id="proCustomMessage" /> Custom blocked-screen message</label>
+        <input
+          type="text"
+          id="proCustomMessageText"
+          class="text-input"
+          placeholder="e.g. Back to work."
+          maxlength="120"
+          hidden
+        />
+        <label><input type="checkbox" id="proLocalStats" /> Local focus stats (never leaves your device)</label>
+        <p id="stats" class="stats" hidden></p>
+        <label><input type="checkbox" id="proScheduledBlocking" /> Scheduled blocking</label>
+        <div class="sub" id="proScheduledBlockingSub" hidden>
+          Block from <input type="time" id="proScheduleStart" />
+          to <input type="time" id="proScheduleEnd" />
+        </div>
+        <label><input type="checkbox" id="proDailyBudget" /> Daily feed budget</label>
+        <div class="sub" id="proDailyBudgetSub" hidden>
+          Allow Home feed for
+          <input type="number" id="proDailyBudgetMinutes" min="1" max="240" />
+          min/day
+          <span id="budgetUsed" class="stats"></span>
+        </div>
+        <label><input type="checkbox" id="proBreathingRoom" /> Breathing room before scrolling</label>
+        <div class="sub" id="proBreathingRoomSub" hidden>
+          Wait <input type="number" id="proBreathingSeconds" min="5" max="300" /> seconds
+        </div>
+        <label class="stub"><input type="checkbox" id="proKeywordMuting" disabled /> Keyword / phrase muting <span class="soon">soon</span></label>
+        <a id="upgrade" class="upgrade" href="#" hidden>Upgrade to Pro</a>
+      </fieldset>
+
+      <p id="status"></p>
+    </main>
+
+    <footer>
+      <span>Changes save automatically. Settings stay on your device — no tracking.</span>
+      <a id="donate" href="#" target="_blank" rel="noopener">☕ Support this project</a>
+    </footer>
+
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>

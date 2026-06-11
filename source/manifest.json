@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Anti-Timeline - X Feed Blocker",
+  "description": "Blocks the addictive parts of Twitter/X (Home timeline, For You, Trends, suggestions) while keeping the useful parts working.",
+  "version": "1.0.0",
+  "icons": {
+    "16": "public/at16.png",
+    "32": "public/at32.png",
+    "48": "public/at48.png",
+    "128": "public/at128.png"
+  },
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://*.x.com/*",
+        "https://twitter.com/*",
+        "https://*.twitter.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["modules/lib.js", "modules/main.js", "modules/blocked-screen.js"],
+      "matches": [
+        "https://x.com/*",
+        "https://*.x.com/*",
+        "https://twitter.com/*",
+        "https://*.twitter.com/*"
+      ]
+    }
+  ],
+  "options_ui": {
+    "page": "popup/popup.html",
+    "open_in_tab": true
+  },
+  "action": {
+    "default_title": "Anti-Timeline Options",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "public/at16.png",
+      "32": "public/at32.png",
+      "48": "public/at48.png",
+      "128": "public/at128.png"
+    }
+  }
+}
