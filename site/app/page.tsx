@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const GITHUB_URL = "https://github.com/conorplunkett/anti-x";
 const DONATE_URL = "https://www.buymeacoffee.com/yourname"; // keep in sync with source/modules/lib.js
@@ -28,6 +28,67 @@ function Switch({
   );
 }
 
+/* Reveals children when scrolled into view */
+function Reveal({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setShown(true);
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.15 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={`reveal ${shown ? "in" : ""}`}>
+      {children}
+    </div>
+  );
+}
+
+/* Celebration when the playground reaches zen */
+const CONFETTI_COLORS = ["#f4212e", "#00ba7c", "#ffd166", "#1d9bf0", "#e7edf3"];
+
+function Confetti() {
+  const pieces = Array.from({ length: 48 }, (_, i) => ({
+    left: Math.random() * 100,
+    delay: Math.random() * 0.5,
+    duration: 1.6 + Math.random() * 1.4,
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    size: 6 + Math.random() * 6,
+    spin: Math.random() > 0.5 ? 1 : -1,
+  }));
+  return (
+    <div className="confetti" aria-hidden="true">
+      {pieces.map((p, i) => (
+        <span
+          key={i}
+          style={{
+            left: `${p.left}%`,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.duration}s`,
+            background: p.color,
+            width: p.size,
+            height: p.size * 0.6,
+            ["--spin" as string]: `${p.spin * 540}deg`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+const fmt = (s: number) =>
+  `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
 const W = [92, 64, 80, 71, 88, 58, 76, 95, 67, 84];
 
 function FakeTweet({ i, tag }: { i: number; tag?: string }) {
@@ -48,6 +109,15 @@ function FakeTweet({ i, tag }: { i: number; tag?: string }) {
 
 function HeroDemo() {
   const [on, setOn] = useState(true);
+  const [lost, setLost] = useState(0);
+
+  // Odometer: seconds tick away while the doomscroll is playing.
+  useEffect(() => {
+    if (on) return;
+    const t = setInterval(() => setLost((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [on]);
+
   return (
     <div className="browser-mock">
       <div className="browser-bar">
@@ -65,6 +135,11 @@ function HeroDemo() {
         <div className="browser-body calm">
           <div className="mock-title">Timeline blocked</div>
           <div className="mock-sub">Use X intentionally.</div>
+          {lost > 0 && (
+            <div className="saved-badge">
+              ⏱ {fmt(lost)} of your life back. It adds up.
+            </div>
+          )}
           <div className="mock-pills">
             {["Post", "Search", "Messages", "Notifications", "Bookmarks", "Lists"].map((p) => (
               <span className="pill" key={p}>{p}</span>
@@ -82,6 +157,7 @@ function HeroDemo() {
             ))}
           </div>
           <div className="doom-fade" />
+          <div className="doom-timer">⏱ {fmt(lost)} lost to the feed</div>
           <div className="doom-hint">😵‍💫 this never ends — flip the switch</div>
         </div>
       )}
@@ -111,6 +187,12 @@ function Playground() {
   });
   const toggle = (k: Part) => setHidden((h) => ({ ...h, [k]: !h[k] }));
   const allOff = Object.values(hidden).every(Boolean);
+
+  // Confetti burst each time the playground reaches the zen state.
+  const [burst, setBurst] = useState(0);
+  useEffect(() => {
+    if (allOff) setBurst(Date.now());
+  }, [allOff]);
 
   return (
     <div className="playground">
@@ -154,6 +236,7 @@ function Playground() {
               <span>🧘</span> Nothing left to scroll. Go do the thing.
             </div>
           )}
+          {allOff && burst > 0 && <Confetti key={burst} />}
         </div>
 
         {/* sidebar */}
@@ -216,22 +299,27 @@ export default function Home() {
 
       {/* Playground */}
       <section className="section" id="play">
-        <h2>You choose what disappears</h2>
-        <Playground />
+        <Reveal>
+          <h2>You choose what disappears</h2>
+          <Playground />
+        </Reveal>
       </section>
 
       {/* Kept */}
       <section className="section">
-        <h2>Everything useful stays</h2>
-        <div className="kept-row">
-          {kept.map((k) => (
-            <span className="kept-chip" key={k}>{k}</span>
-          ))}
-        </div>
+        <Reveal>
+          <h2>Everything useful stays</h2>
+          <div className="kept-row">
+            {kept.map((k) => (
+              <span className="kept-chip" key={k}>{k}</span>
+            ))}
+          </div>
+        </Reveal>
       </section>
 
       {/* How */}
       <section className="section">
+        <Reveal>
         <h2>How it works</h2>
         <div className="steps-row">
           <div className="step-min"><span>1️⃣</span>Install</div>
@@ -243,10 +331,12 @@ export default function Home() {
         <p className="tech-line">
           Watches X’s page with a <code>MutationObserver</code> · settings in <code>chrome.storage.local</code> · zero network requests
         </p>
+        </Reveal>
       </section>
 
       {/* Free vs Pro */}
       <section className="section" id="pricing">
+        <Reveal>
         <h2>Free does everything above</h2>
         <div className="plans">
           <div className="plan plan-free">
@@ -282,14 +372,17 @@ export default function Home() {
             ☕️ Support the project
           </a>
         </div>
+        </Reveal>
       </section>
 
       {/* Final */}
       <section className="section final">
-        <h2>Use X. Don’t let X use you.</h2>
-        <a className="btn btn-primary btn-lg" href={GITHUB_URL} target="_blank" rel="noopener">
-          Get Anti-Timeline
-        </a>
+        <Reveal>
+          <h2>Use X. Don’t let X use you.</h2>
+          <a className="btn btn-primary btn-lg" href={GITHUB_URL} target="_blank" rel="noopener">
+            Get Anti-Timeline
+          </a>
+        </Reveal>
       </section>
 
       <footer className="footer">
