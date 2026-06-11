@@ -17,6 +17,20 @@ No tracking. No analytics. No remote server. Settings stay on your device.
 4. Visit `x.com` — the Home timeline should be replaced by a blocked screen.
 5. Click the Anti-Timeline toolbar icon to adjust toggles (changes apply live).
 
+## Pro features (scaffolded, no payment wired up)
+
+The popup has a Pro section gated behind an `isPro` flag. To unlock it for
+testing, run this in DevTools on any x.com tab (or the popup's inspect view):
+
+```js
+chrome.storage.local.set({ isPro: true })
+```
+
+Implemented: custom blocked-screen message, local focus stats, scheduled
+blocking, daily feed budget, and a breathing-room countdown. Keyword muting is
+still a stub. Everything stays in `chrome.storage.local` — no payment provider
+or network calls are wired up yet (see the TODO in `source/popup/popup.js`).
+
 ## Manual QA checklist (PRD acceptance criteria)
 
 - [ ] Extension installs locally without errors
