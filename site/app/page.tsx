@@ -1,103 +1,196 @@
+"use client";
+
+import { useState } from "react";
+
 const GITHUB_URL = "https://github.com/conorplunkett/anti-x";
 const DONATE_URL = "https://www.buymeacoffee.com/yourname"; // keep in sync with source/modules/lib.js
 
-const blocked = [
-  { emoji: "🏠", title: "Home timeline", desc: "No more landing on an infinite feed every time you open X." },
-  { emoji: "✨", title: "“For You” feed", desc: "The algorithmic rabbit hole is gone. Optionally keep “Following”." },
-  { emoji: "📈", title: "Trends", desc: "“What’s happening” stops happening to you." },
-  { emoji: "🧭", title: "Explore", desc: "The Explore page and its nav link disappear entirely." },
-  { emoji: "👤", title: "Suggested accounts", desc: "“Who to follow” and “You might like” modules are hidden." },
-  { emoji: "🔁", title: "Suggested posts", desc: "Recommended and promoted posts injected into feeds are removed." },
-  { emoji: "⬇️", title: "“More posts”", desc: "The “Discover more” trap under every tweet link is gone." },
+/* ---------- tiny building blocks ---------- */
+
+function Switch({
+  on,
+  onChange,
+  label,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+  label?: string;
+}) {
+  return (
+    <button
+      className={`switch ${on ? "on" : ""}`}
+      onClick={() => onChange(!on)}
+      aria-pressed={on}
+      aria-label={label}
+    >
+      <span className="knob" />
+    </button>
+  );
+}
+
+const W = [92, 64, 80, 71, 88, 58, 76, 95, 67, 84];
+
+function FakeTweet({ i, tag }: { i: number; tag?: string }) {
+  return (
+    <div className="tweet">
+      <span className="avatar" />
+      <span className="tweet-lines">
+        <span className="line name" style={{ width: 60 + (i % 4) * 14 }} />
+        <span className="line" style={{ width: `${W[i % W.length]}%` }} />
+        <span className="line" style={{ width: `${W[(i + 3) % W.length] - 18}%` }} />
+        {tag && <span className="tweet-tag">{tag}</span>}
+      </span>
+    </div>
+  );
+}
+
+/* ---------- hero: flip the extension on/off ---------- */
+
+function HeroDemo() {
+  const [on, setOn] = useState(true);
+  return (
+    <div className="browser-mock">
+      <div className="browser-bar">
+        <span className="dot" />
+        <span className="dot" />
+        <span className="dot" />
+        <span className="url">x.com/home</span>
+        <span className="bar-toggle">
+          <span className="bar-toggle-label">⛔️ Anti-Timeline</span>
+          <Switch on={on} onChange={setOn} label="Toggle Anti-Timeline" />
+        </span>
+      </div>
+
+      {on ? (
+        <div className="browser-body calm">
+          <div className="mock-title">Timeline blocked</div>
+          <div className="mock-sub">Use X intentionally.</div>
+          <div className="mock-pills">
+            {["Post", "Search", "Messages", "Notifications", "Bookmarks", "Lists"].map((p) => (
+              <span className="pill" key={p}>{p}</span>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="browser-body doom">
+          <div className="doom-scroll">
+            {Array.from({ length: 16 }).map((_, i) => (
+              <FakeTweet key={i} i={i} tag={i % 5 === 2 ? "Suggested" : i % 7 === 3 ? "Promoted" : undefined} />
+            ))}
+            {Array.from({ length: 16 }).map((_, i) => (
+              <FakeTweet key={`b${i}`} i={i} tag={i % 5 === 2 ? "Suggested" : undefined} />
+            ))}
+          </div>
+          <div className="doom-fade" />
+          <div className="doom-hint">😵‍💫 this never ends — flip the switch</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- playground: strip the UI piece by piece ---------- */
+
+type Part = "feed" | "trends" | "follow" | "suggested" | "explore";
+
+const PARTS: { key: Part; label: string; emoji: string }[] = [
+  { key: "feed", label: "Home feed", emoji: "🏠" },
+  { key: "explore", label: "Explore", emoji: "🧭" },
+  { key: "trends", label: "Trends", emoji: "📈" },
+  { key: "follow", label: "Who to follow", emoji: "👤" },
+  { key: "suggested", label: "Suggested posts", emoji: "🔁" },
 ];
 
-const kept = [
-  { emoji: "✍️", title: "Posting" },
-  { emoji: "🔍", title: "Search" },
-  { emoji: "💬", title: "DMs" },
-  { emoji: "🔔", title: "Notifications" },
-  { emoji: "🔖", title: "Bookmarks" },
-  { emoji: "📋", title: "Lists" },
-  { emoji: "🪪", title: "Profiles" },
-  { emoji: "🔗", title: "Tweet links" },
-];
+function Playground() {
+  const [hidden, setHidden] = useState<Record<Part, boolean>>({
+    feed: false,
+    trends: false,
+    follow: false,
+    suggested: false,
+    explore: false,
+  });
+  const toggle = (k: Part) => setHidden((h) => ({ ...h, [k]: !h[k] }));
+  const allOff = Object.values(hidden).every(Boolean);
 
-const steps = [
-  {
-    n: "1",
-    title: "Install it",
-    desc: "Add Anti-Timeline to Chrome. No account, no sign-up, no onboarding. The defaults are already right.",
-  },
-  {
-    n: "2",
-    title: "Open X like you normally would",
-    desc: "Instead of the feed, you see a calm blocked screen with shortcuts to the things you actually came for: posting, search, messages, notifications.",
-  },
-  {
-    n: "3",
-    title: "Do the thing. Leave.",
-    desc: "Reply to the DM, post the thing, read the tweet someone sent you — then get on with your day. The feed never gets a chance to grab you.",
-  },
-];
+  return (
+    <div className="playground">
+      <div className="pg-toggles">
+        {PARTS.map((p) => (
+          <button
+            key={p.key}
+            className={`pg-chip ${hidden[p.key] ? "off" : ""}`}
+            onClick={() => toggle(p.key)}
+          >
+            {p.emoji} {p.label}
+          </button>
+        ))}
+      </div>
 
-const freeFeatures = [
-  "Block Home timeline & For You feed",
-  "Optionally allow the Following feed",
-  "Hide Trends, Explore & all suggestions",
-  "Hide “More posts” under tweets",
-  "Calm blocked screen with useful shortcuts",
-  "Toggles for everything — changes apply instantly",
-  "Settings stay on your device",
-  "No tracking, no analytics, no server. Ever.",
-];
+      <div className="x-mock">
+        {/* left nav */}
+        <div className="x-nav">
+          {["🏠", "🔍", "🔔", "✉️", "🔖", "📋", "🪪"].map((n, i) => (
+            <span key={i} className={`x-nav-item ${n === "🧭" ? "" : ""}`}>{n}</span>
+          ))}
+          <span className={`x-nav-item gone-able ${hidden.explore ? "gone" : ""}`}>🧭</span>
+        </div>
 
-const proFeatures = [
-  { title: "Scheduled blocking", desc: "Only block during work hours — or only allow X at lunch." },
-  { title: "Daily feed budget", desc: "Allow the feed for, say, 15 minutes a day. Then it’s gone." },
-  { title: "Breathing room", desc: "A countdown before the feed unlocks. Most of the time, you’ll close the tab." },
-  { title: "Custom blocked-screen message", desc: "Replace the default with your own words. “Back to work.”" },
-  { title: "Local focus stats", desc: "See how many feed-opens you blocked — computed on your device, never sent anywhere." },
-];
+        {/* feed column */}
+        <div className="x-feed">
+          <div className={`gone-able ${hidden.feed ? "gone" : ""}`}>
+            <FakeTweet i={1} />
+            <FakeTweet i={4} />
+          </div>
+          <div className={`x-module gone-able ${hidden.suggested ? "gone" : ""}`}>
+            <span className="x-module-title">🔁 Suggested for you</span>
+            <FakeTweet i={7} tag="Suggested" />
+          </div>
+          <div className={`gone-able ${hidden.feed ? "gone" : ""}`}>
+            <FakeTweet i={2} />
+            <FakeTweet i={8} />
+          </div>
+          {allOff && (
+            <div className="pg-calm">
+              <span>🧘</span> Nothing left to scroll. Go do the thing.
+            </div>
+          )}
+        </div>
 
-const faqs = [
-  {
-    q: "Does it work on twitter.com and x.com?",
-    a: "Yes, both. The extension runs on every X domain and behaves identically.",
-  },
-  {
-    q: "Can I still use X for work?",
-    a: "That’s the whole point. Posting, search, DMs, notifications, bookmarks, lists, profiles, and direct tweet links all keep working exactly as before. Only the passive-consumption surfaces are removed.",
-  },
-  {
-    q: "What data do you collect?",
-    a: "None. Not your history, not your tweets, not your clicks, not even anonymous analytics. There is no server to send anything to. Your settings live in your browser’s local storage and die with the uninstall.",
-  },
-  {
-    q: "Why not just use a website blocker?",
-    a: "Full blockers are too blunt — they cut off the useful parts of X along with the feed. Anti-Timeline removes only the parts engineered to keep you scrolling.",
-  },
-  {
-    q: "What happens when X changes its design?",
-    a: "X’s interface changes often. The extension targets X’s most stable internal markers, and all of them live in a single file — so fixes ship fast. It’s open source; you can even patch it yourself.",
-  },
-];
+        {/* sidebar */}
+        <div className="x-side">
+          <div className={`x-module gone-able ${hidden.trends ? "gone" : ""}`}>
+            <span className="x-module-title">📈 What’s happening</span>
+            <span className="line" style={{ width: "78%" }} />
+            <span className="line" style={{ width: "62%" }} />
+            <span className="line" style={{ width: "70%" }} />
+          </div>
+          <div className={`x-module gone-able ${hidden.follow ? "gone" : ""}`}>
+            <span className="x-module-title">👤 Who to follow</span>
+            <span className="mini-user"><span className="avatar sm" /><span className="line" style={{ width: "55%" }} /></span>
+            <span className="mini-user"><span className="avatar sm" /><span className="line" style={{ width: "45%" }} /></span>
+          </div>
+        </div>
+      </div>
+
+      <p className="pg-caption">Tap the chips. That’s the whole extension.</p>
+    </div>
+  );
+}
+
+/* ---------- page ---------- */
+
+const kept = ["✍️ Post", "🔍 Search", "💬 DMs", "🔔 Notifications", "🔖 Bookmarks", "📋 Lists", "🪪 Profiles", "🔗 Tweet links"];
 
 export default function Home() {
   return (
     <main>
-      {/* Nav */}
       <nav className="nav">
         <div className="nav-inner">
-          <span className="logo">
-            <span className="logo-mark">⛔️</span> Anti-Timeline
-          </span>
+          <span className="logo">⛔️ Anti-Timeline</span>
           <div className="nav-links">
-            <a href="#features">Features</a>
-            <a href="#how">How it works</a>
+            <a href="#play">Demo</a>
             <a href="#pricing">Free vs Pro</a>
-            <a href={GITHUB_URL} target="_blank" rel="noopener">
-              GitHub
-            </a>
+            <a href={GITHUB_URL} target="_blank" rel="noopener">GitHub</a>
           </div>
         </div>
       </nav>
@@ -110,155 +203,73 @@ export default function Home() {
           <span className="accent">Skip the feed.</span>
         </h1>
         <p className="lede">
-          Anti-Timeline is a free Chrome extension that removes the Home
-          timeline, For You feed, Trends, and every recommendation surface on
-          Twitter/X — while keeping posting, search, DMs, and everything you
-          actually need.
+          A free Chrome extension that removes the feed — and nothing else.
         </p>
         <div className="hero-ctas">
           <a className="btn btn-primary" href={GITHUB_URL} target="_blank" rel="noopener">
-            Get the extension
-          </a>
-          <a className="btn btn-ghost" href="#how">
-            How it works
+            Get it free
           </a>
         </div>
-        <p className="hero-note">Free · Open source · No tracking, ever</p>
-
-        {/* Mock of the blocked screen */}
-        <div className="browser-mock" aria-hidden="true">
-          <div className="browser-bar">
-            <span className="dot" />
-            <span className="dot" />
-            <span className="dot" />
-            <span className="url">x.com/home</span>
-          </div>
-          <div className="browser-body">
-            <div className="mock-title">Timeline blocked</div>
-            <div className="mock-sub">Use X intentionally.</div>
-            <div className="mock-pills">
-              {["Post", "Search", "Messages", "Notifications", "Bookmarks", "Lists"].map((p) => (
-                <span className="pill" key={p}>
-                  {p}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
+        <p className="hero-note">Open source · No tracking · 1 permission</p>
+        <HeroDemo />
       </header>
 
-      {/* Problem */}
-      <section className="section narrow">
-        <h2>You opened X to do one thing.</h2>
-        <p className="body-lg">
-          Send a DM. Post something. Read the tweet someone linked you. Then
-          the Home feed loaded, “For You” had other plans, and twenty-five
-          minutes vanished. That isn’t a willpower problem — the feed is
-          engineered to do exactly that. Full site blockers are too blunt:
-          they take away the useful tool along with the trap.{" "}
-          <strong>
-            Anti-Timeline removes the trap and keeps the tool.
-          </strong>
-        </p>
+      {/* Playground */}
+      <section className="section" id="play">
+        <h2>You choose what disappears</h2>
+        <Playground />
       </section>
 
-      {/* Features: blocked */}
-      <section className="section" id="features">
-        <h2>What it removes</h2>
-        <p className="section-sub">Every passive-consumption surface, hidden by default.</p>
-        <div className="grid grid-3">
-          {blocked.map((f) => (
-            <div className="card" key={f.title}>
-              <div className="card-emoji">{f.emoji}</div>
-              <h3>{f.title}</h3>
-              <p>{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Features: kept */}
+      {/* Kept */}
       <section className="section">
-        <h2>What keeps working</h2>
-        <p className="section-sub">
-          Everything intentional is untouched. These pages are never blocked.
-        </p>
+        <h2>Everything useful stays</h2>
         <div className="kept-row">
           {kept.map((k) => (
-            <span className="kept-chip" key={k.title}>
-              {k.emoji} {k.title}
-            </span>
+            <span className="kept-chip" key={k}>{k}</span>
           ))}
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="section" id="how">
+      {/* How */}
+      <section className="section">
         <h2>How it works</h2>
-        <div className="grid grid-3">
-          {steps.map((s) => (
-            <div className="card step" key={s.n}>
-              <div className="step-num">{s.n}</div>
-              <h3>{s.title}</h3>
-              <p>{s.desc}</p>
-            </div>
-          ))}
+        <div className="steps-row">
+          <div className="step-min"><span>1️⃣</span>Install</div>
+          <div className="step-arrow">→</div>
+          <div className="step-min"><span>2️⃣</span>Open X, see calm</div>
+          <div className="step-arrow">→</div>
+          <div className="step-min"><span>3️⃣</span>Do the thing. Leave.</div>
         </div>
-
-        <div className="tech card-wide">
-          <h3>🛠 Under the hood (for the curious)</h3>
-          <p>
-            X is a single-page app that rebuilds itself constantly, so
-            Anti-Timeline watches the page with a{" "}
-            <code>MutationObserver</code> and reacts the moment X tries to
-            render a feed, a trends module, or a suggestion. Blocked surfaces
-            are replaced with a calm screen of shortcuts; everything else is
-            simply hidden. Your toggles are stored with{" "}
-            <code>chrome.storage.local</code> and apply live — no page reload
-            needed. The extension requests exactly one permission
-            (<code>storage</code>), makes <strong>zero network requests</strong>,
-            and contains no analytics of any kind. The entire codebase is open
-            source and small enough to read over coffee.
-          </p>
-        </div>
+        <p className="tech-line">
+          Watches X’s page with a <code>MutationObserver</code> · settings in <code>chrome.storage.local</code> · zero network requests
+        </p>
       </section>
 
       {/* Free vs Pro */}
       <section className="section" id="pricing">
-        <h2>Free does everything you need</h2>
-        <p className="section-sub">
-          The full blocker is free, forever. Pro adds optional habit tools on
-          top — for people who want guardrails, not just walls.
-        </p>
-
+        <h2>Free does everything above</h2>
         <div className="plans">
           <div className="plan plan-free">
             <div className="plan-badge">Free · Forever</div>
             <h3>Anti-Timeline</h3>
-            <p className="plan-tag">The complete blocker. Not a trial. Not a teaser.</p>
             <ul>
-              {freeFeatures.map((f) => (
-                <li key={f}>✓ {f}</li>
-              ))}
+              <li>✓ Block Home & For You</li>
+              <li>✓ Hide Trends, Explore & suggestions</li>
+              <li>✓ Instant toggles for everything</li>
+              <li>✓ No tracking. No server. Ever.</li>
             </ul>
             <a className="btn btn-primary btn-block" href={GITHUB_URL} target="_blank" rel="noopener">
               Get it free
             </a>
           </div>
-
           <div className="plan plan-pro">
             <div className="plan-badge pro">Pro · Optional</div>
-            <h3>Anti-Timeline Pro</h3>
-            <p className="plan-tag">
-              Everything in Free, plus habit tools. Still 100% local, still zero
-              tracking.
-            </p>
+            <h3>+ habit tools</h3>
             <ul>
-              {proFeatures.map((f) => (
-                <li key={f.title}>
-                  <strong>{f.title}</strong> — {f.desc}
-                </li>
-              ))}
+              <li>⏰ Scheduled blocking</li>
+              <li>⏳ Daily feed budget</li>
+              <li>🧘 Breathing-room countdown</li>
+              <li>📊 On-device focus stats</li>
             </ul>
             <span className="btn btn-ghost btn-block disabled">Coming soon</span>
           </div>
@@ -266,49 +277,14 @@ export default function Home() {
 
         {/* Donation — right under the two versions */}
         <div className="donate">
-          <h3>☕️ Anti-Timeline is free. It’s going to stay free.</h3>
-          <p>
-            No ads, no data sales, no dark patterns — which also means no
-            revenue. If this extension gives you back even one scroll-free
-            afternoon, you can buy me a coffee. It keeps the selectors updated
-            every time X redesigns itself.
-          </p>
+          <h3>☕️ Free forever. Coffee optional.</h3>
           <a className="btn btn-donate" href={DONATE_URL} target="_blank" rel="noopener">
             ☕️ Support the project
           </a>
         </div>
       </section>
 
-      {/* Privacy */}
-      <section className="section narrow">
-        <h2>Privacy isn’t a feature. It’s the architecture.</h2>
-        <p className="body-lg">
-          Anti-Timeline collects <strong>nothing</strong>. No browsing history,
-          no tweet content, no DMs, no usernames, no clicks, no time-spent, no
-          “anonymous” analytics. There is no server — the extension physically
-          cannot phone home. Your settings live in your browser and nowhere
-          else. You can verify all of this yourself: the{" "}
-          <a href={GITHUB_URL} target="_blank" rel="noopener">
-            source code is public
-          </a>
-          .
-        </p>
-      </section>
-
-      {/* FAQ */}
-      <section className="section narrow">
-        <h2>Questions</h2>
-        <div className="faq">
-          {faqs.map((f) => (
-            <details key={f.q}>
-              <summary>{f.q}</summary>
-              <p>{f.a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
-
-      {/* Final CTA */}
+      {/* Final */}
       <section className="section final">
         <h2>Use X. Don’t let X use you.</h2>
         <a className="btn btn-primary btn-lg" href={GITHUB_URL} target="_blank" rel="noopener">
