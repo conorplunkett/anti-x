@@ -49,7 +49,22 @@
         />
         <label><input type="checkbox" id="proLocalStats" /> Local focus stats (never leaves your device)</label>
         <p id="stats" class="stats" hidden></p>
-        <label class="stub"><input type="checkbox" id="proScheduledBlocking" disabled /> Scheduled blocking <span class="soon">soon</span></label>
+        <label><input type="checkbox" id="proScheduledBlocking" /> Scheduled blocking</label>
+        <div class="sub" id="proScheduledBlockingSub" hidden>
+          Block from <input type="time" id="proScheduleStart" />
+          to <input type="time" id="proScheduleEnd" />
+        </div>
+        <label><input type="checkbox" id="proDailyBudget" /> Daily feed budget</label>
+        <div class="sub" id="proDailyBudgetSub" hidden>
+          Allow Home feed for
+          <input type="number" id="proDailyBudgetMinutes" min="1" max="240" />
+          min/day
+          <span id="budgetUsed" class="stats"></span>
+        </div>
+        <label><input type="checkbox" id="proBreathingRoom" /> Breathing room before scrolling</label>
+        <div class="sub" id="proBreathingRoomSub" hidden>
+          Wait <input type="number" id="proBreathingSeconds" min="5" max="300" /> seconds
+        </div>
         <label class="stub"><input type="checkbox" id="proKeywordMuting" disabled /> Keyword / phrase muting <span class="soon">soon</span></label>
         <a id="upgrade" class="upgrade" href="#" hidden>Upgrade to Pro</a>
       </fieldset>

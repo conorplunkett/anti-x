@@ -10,14 +10,41 @@ import {
   loadPro,
   loadProSettings,
   recordBlock,
+  isWithinSchedule,
+  getBudgetUsedToday,
+  recordBudgetSeconds,
+  todayKey,
   PRO_KEY,
   CUSTOM_MESSAGE_KEY,
   STATS_KEY,
+  BUDGET_USAGE_KEY,
+  HIDDEN_ATTR,
 } from "./lib.js";
-import { buildBlockedScreen, BLOCKED_SCREEN_ID } from "./blocked-screen.js";
+import {
+  buildBlockedScreen,
+  buildBreathingScreen,
+  BLOCKED_SCREEN_ID,
+} from "./blocked-screen.js";
 
 let settings = { ...defaultSettings };
 let pro = { isPro: false, ...defaultProSettings, [CUSTOM_MESSAGE_KEY]: "" };
+
+// Time-gate state (all in-memory; budget usage is persisted via lib.js).
+const TICK_SECONDS = 10;
+const BREATHING_GRANT_MS = 5 * 60 * 1000;
+const breathingGrants = {}; // surface -> expiry timestamp
+let budgetUsedToday = 0;
+let budgetDate = todayKey();
+let lastScheduleActive = null;
+
+// Scheduled blocking: when enabled and outside the window, the extension
+// behaves as if disabled.
+const blockingActiveNow = () =>
+  !(pro.isPro && pro.proScheduledBlocking) ||
+  isWithinSchedule(pro.proScheduleStart, pro.proScheduleEnd);
+
+const budgetRemainingSeconds = () =>
+  (Number(pro.proDailyBudgetMinutes) || 0) * 60 - budgetUsedToday;
 
 const textMatches = (el, needles) => {
   const text = (el?.textContent || "").trim().toLowerCase();
@@ -28,25 +55,92 @@ const removeBlockedScreen = () => {
   document.getElementById(BLOCKED_SCREEN_ID)?.remove();
 };
 
-// Hide the timeline region inside the primary column and show the blocked
-// screen in its place. Keeps the page header (and home tab bar) visible.
-const blockTimeline = (title) => {
+const findTimelineRegion = () => {
   const column = document.querySelector(selectors.primaryColumn);
-  if (!column) return;
+  return (
+    column?.querySelector('div[aria-label*="timeline" i]') ||
+    column?.querySelector("section[role='region']") ||
+    null
+  );
+};
 
-  const region =
-    column.querySelector('div[aria-label*="timeline" i]') ||
-    column.querySelector("section[role='region']");
-  hide(region);
-
-  if (!document.getElementById(BLOCKED_SCREEN_ID)) {
-    const anchor = region?.parentElement || column;
-    const customText = (pro[CUSTOM_MESSAGE_KEY] || "").trim();
-    const message =
-      pro.isPro && pro.proCustomMessage && customText ? customText : undefined;
-    anchor.appendChild(buildBlockedScreen(title, message));
-    if (pro.isPro && pro.proLocalStats) recordBlock();
+// Hide the timeline region and mount a replacement screen in its place.
+// `type` distinguishes screens (blocked vs breathing) so the observer doesn't
+// rebuild an existing one, but a mode change swaps it. Returns true if a new
+// screen was created.
+const mountScreen = (type, build) => {
+  const existing = document.getElementById(BLOCKED_SCREEN_ID);
+  if (existing) {
+    if (existing.dataset.screen === type) return false;
+    existing.remove();
   }
+  const column = document.querySelector(selectors.primaryColumn);
+  if (!column) return false;
+  const region = findTimelineRegion();
+  hide(region);
+  const el = build();
+  el.dataset.screen = type;
+  (region?.parentElement || column).appendChild(el);
+  return true;
+};
+
+// Keeps the page header (and home tab bar) visible.
+const blockTimeline = (title) => {
+  const customText = (pro[CUSTOM_MESSAGE_KEY] || "").trim();
+  const message =
+    pro.isPro && pro.proCustomMessage && customText ? customText : undefined;
+  const created = mountScreen(`blocked:${title}`, () =>
+    buildBlockedScreen(title, message)
+  );
+  if (created && pro.isPro && pro.proLocalStats) recordBlock();
+};
+
+const showBreathingScreen = (surface) => {
+  mountScreen(`breathing:${surface}`, () =>
+    buildBreathingScreen(Math.max(Number(pro.proBreathingSeconds) || 30, 3), () => {
+      breathingGrants[surface] = Date.now() + BREATHING_GRANT_MS;
+      restoreTimeline();
+      onMutation();
+    })
+  );
+};
+
+// Undo feed blocking: remove our screen and unhide the timeline region.
+const restoreTimeline = () => {
+  removeBlockedScreen();
+  const region = findTimelineRegion();
+  if (region?.getAttribute(HIDDEN_ATTR)) {
+    region.style.display = "";
+    region.removeAttribute(HIDDEN_ATTR);
+  }
+};
+
+// Decide what to show for a feed surface that blocking applies to.
+// Precedence: daily budget (home only) > breathing room > hard block.
+const applyFeedGate = (surface, wantBlock, title, { budget = false } = {}) => {
+  if (budget && pro.isPro && pro.proDailyBudget) {
+    // Budget mode: the feed is allowed until today's minutes run out,
+    // regardless of the block toggles — then it's a hard block.
+    if (budgetRemainingSeconds() > 0) {
+      restoreTimeline();
+    } else {
+      blockTimeline("Daily limit reached");
+    }
+    return;
+  }
+  if (!wantBlock) {
+    restoreTimeline();
+    return;
+  }
+  if (pro.isPro && pro.proBreathingRoom) {
+    if ((breathingGrants[surface] || 0) > Date.now()) {
+      restoreTimeline();
+    } else {
+      showBreathingScreen(surface);
+    }
+    return;
+  }
+  blockTimeline(title);
 };
 
 const activeHomeTab = () => {
@@ -68,18 +162,14 @@ const handleHome = () => {
   }
 
   const allowThisTab = settings.allowFollowing && onFollowing;
-  const shouldBlock =
+  const wantBlock =
     (settings.blockHomeTimeline || settings.blockForYou) && !allowThisTab;
 
-  if (shouldBlock) {
-    blockTimeline("Timeline blocked");
-  } else {
-    removeBlockedScreen();
-  }
+  applyFeedGate("home", wantBlock, "Timeline blocked", { budget: true });
 };
 
 const handleExplore = () => {
-  if (settings.hideExplore) blockTimeline("Explore blocked");
+  applyFeedGate("explore", settings.hideExplore, "Explore blocked");
 };
 
 // Hide "Discover more" / "More posts" under a tweet: the header cell and
@@ -147,7 +237,7 @@ const hideExploreNavLink = () => {
 };
 
 const onMutation = () => {
-  if (!settings.enabled) return;
+  if (!settings.enabled || !blockingActiveNow()) return;
 
   const path = window.location.pathname;
 
@@ -188,17 +278,59 @@ const onMutation = () => {
   hideExploreNavLink();
 };
 
+// Runs every TICK_SECONDS: handles schedule transitions (which happen by time
+// passing, not by mutations) and accrues daily budget usage while the user is
+// actually viewing an unblocked home feed in a visible tab.
+const tick = () => {
+  const active = blockingActiveNow();
+  if (lastScheduleActive !== null && active !== lastScheduleActive) {
+    unhideAll();
+    removeBlockedScreen();
+  }
+  lastScheduleActive = active;
+  if (!active || !settings.enabled) return;
+  onMutation();
+
+  const path = window.location.pathname;
+  const onHome = path === urls.home || path === "/";
+  const feedVisible = !document.getElementById(BLOCKED_SCREEN_ID);
+  if (
+    pro.isPro &&
+    pro.proDailyBudget &&
+    onHome &&
+    feedVisible &&
+    document.visibilityState === "visible"
+  ) {
+    const today = todayKey();
+    if (today !== budgetDate) {
+      budgetDate = today;
+      budgetUsedToday = 0;
+    }
+    budgetUsedToday += TICK_SECONDS;
+    recordBudgetSeconds(TICK_SECONDS);
+    if (budgetRemainingSeconds() <= 0) onMutation();
+  }
+};
+
 async function main() {
   settings = await loadSettings();
   pro = { isPro: await loadPro(), ...(await loadProSettings()) };
+  budgetUsedToday = await getBudgetUsedToday();
+  lastScheduleActive = blockingActiveNow();
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
     let changed = false;
     for (const [key, { newValue }] of Object.entries(changes)) {
-      // Stats writes come from this script itself; reacting to them would
-      // rebuild the blocked screen and record again, looping forever.
+      // Stats and budget writes come from this script itself; reacting to
+      // them would rebuild the blocked screen and record again, looping.
       if (key === STATS_KEY) continue;
+      if (key === BUDGET_USAGE_KEY) {
+        // Another x.com tab may have ticked the budget; stay in sync.
+        const usage = changes[key].newValue || {};
+        budgetUsedToday = Math.max(budgetUsedToday, usage[todayKey()] || 0);
+        continue;
+      }
       if (key === PRO_KEY) {
         pro.isPro = Boolean(newValue);
       } else if (key in pro) {
@@ -218,6 +350,8 @@ async function main() {
   const observer = new MutationObserver(onMutation);
   observer.observe(document, { subtree: true, childList: true });
   onMutation();
+
+  setInterval(tick, TICK_SECONDS * 1000);
 }
 
 export { main };

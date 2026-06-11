@@ -102,6 +102,26 @@ fieldset:disabled {
   margin: 2px 0 6px;
 }
 
+.sub {
+  margin: 0 0 8px 24px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.sub input[type="time"],
+.sub input[type="number"] {
+  font: inherit;
+  padding: 3px 6px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+}
+
+.sub input[type="number"] {
+  width: 52px;
+}
+
 .stub {
   opacity: 0.5;
   cursor: default;

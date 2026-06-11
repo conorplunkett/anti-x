@@ -23,12 +23,17 @@ export const loadPro = async () => {
   return Boolean(isPro);
 };
 
-// Pro feature toggles. Implemented: proCustomMessage, proLocalStats.
-// Still stubs: proScheduledBlocking, proKeywordMuting.
+// Pro feature toggles (with their sub-settings). Still a stub: proKeywordMuting.
 export const defaultProSettings = {
   proCustomMessage: false,
   proLocalStats: true,
   proScheduledBlocking: false,
+  proScheduleStart: "09:00",
+  proScheduleEnd: "17:00",
+  proDailyBudget: false,
+  proDailyBudgetMinutes: 15,
+  proBreathingRoom: false,
+  proBreathingSeconds: 30,
   proKeywordMuting: false,
 };
 
@@ -51,6 +56,44 @@ export const loadProSettings = async () => {
 // Local focus stats: a per-day counter of blocked feed opens. Stays entirely
 // in chrome.storage.local; pruned to the last 30 days.
 const dayKey = (d) => d.toISOString().slice(0, 10);
+
+export const todayKey = () => dayKey(new Date());
+
+// Scheduled blocking: "HH:MM" range, supports overnight spans (22:00–06:00).
+// An empty/equal range means "always".
+export const isWithinSchedule = (start, end, now = new Date()) => {
+  const toMin = (s) => {
+    const [h, m] = String(s).split(":").map(Number);
+    return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : NaN;
+  };
+  const s = toMin(start);
+  const e = toMin(end);
+  if (Number.isNaN(s) || Number.isNaN(e) || s === e) return true;
+  const n = now.getHours() * 60 + now.getMinutes();
+  return s < e ? n >= s && n < e : n >= s || n < e;
+};
+
+// Daily feed budget: seconds of feed time used today, stored locally and
+// reset implicitly by keying on the date.
+export const BUDGET_USAGE_KEY = "budgetUsage";
+
+export const getBudgetUsedToday = async () => {
+  const { [BUDGET_USAGE_KEY]: usage = {} } =
+    await chrome.storage.local.get(BUDGET_USAGE_KEY);
+  return usage[todayKey()] || 0;
+};
+
+export const recordBudgetSeconds = async (seconds) => {
+  const { [BUDGET_USAGE_KEY]: usage = {} } =
+    await chrome.storage.local.get(BUDGET_USAGE_KEY);
+  const today = todayKey();
+  usage[today] = (usage[today] || 0) + seconds;
+  for (const k of Object.keys(usage)) {
+    if (k !== today) delete usage[k];
+  }
+  await chrome.storage.local.set({ [BUDGET_USAGE_KEY]: usage });
+  return usage[today];
+};
 
 export const recordBlock = async () => {
   const { [STATS_KEY]: stats = {} } = await chrome.storage.local.get(STATS_KEY);
