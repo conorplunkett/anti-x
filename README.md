@@ -61,9 +61,21 @@ source/
 ├── popup/                   # toolbar popup / options page (auto-saving toggles)
 └── public/                  # icons (16/32/48/128) — placeholders, replaceable
 store/
-├── description.md           # Chrome Web Store listing copy + checklist
+├── webstore-listing.md      # paste-ready Chrome Web Store listing + checklist
 └── privacy.md               # privacy policy (no data collection)
+site/                        # Next.js landing page (npm run dev)
 ```
+
+## Landing page
+
+A local landing page (one-sec.app style) lives in `site/`:
+
+```sh
+cd site && npm install && npm run dev
+```
+
+Then open http://localhost:3000. Main content is in `site/app/page.tsx`,
+styles in `site/app/globals.css`.
 
 ## How it works
 
@@ -84,7 +96,8 @@ cd source && zip -r ../anti-timeline.zip . -x '.*'
 
 Then upload `anti-timeline.zip` at the
 [developer console](https://chrome.google.com/webstore/devconsole). See
-`store/description.md` for listing copy and the submission checklist.
+`store/webstore-listing.md` for paste-ready listing copy and the submission
+checklist.
 
 ## License
 
