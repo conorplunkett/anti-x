@@ -1,4 +1,13 @@
-import { settingsKeys, loadSettings, loadPro, DONATE_URL } from "../modules/lib.js";
+import {
+  settingsKeys,
+  loadSettings,
+  loadPro,
+  loadProSettings,
+  summarizeStats,
+  CUSTOM_MESSAGE_KEY,
+  STATS_KEY,
+  DONATE_URL,
+} from "../modules/lib.js";
 
 let statusTimer;
 
@@ -45,6 +54,46 @@ const init = async () => {
     proFieldset.disabled = false;
     proBadge.textContent = "Active";
     upgrade.hidden = true;
+
+    const proSettings = await loadProSettings();
+
+    // Custom blocked-screen message: toggle + text input (saved on edit).
+    const msgToggle = document.getElementById("proCustomMessage");
+    const msgInput = document.getElementById(CUSTOM_MESSAGE_KEY);
+    msgToggle.checked = proSettings.proCustomMessage;
+    msgInput.value = proSettings[CUSTOM_MESSAGE_KEY];
+    msgInput.hidden = !proSettings.proCustomMessage;
+    msgToggle.addEventListener("change", async () => {
+      msgInput.hidden = !msgToggle.checked;
+      await chrome.storage.local.set({ proCustomMessage: msgToggle.checked });
+      flashStatus("Saved ✓");
+    });
+    let msgTimer;
+    msgInput.addEventListener("input", () => {
+      clearTimeout(msgTimer);
+      msgTimer = setTimeout(async () => {
+        await chrome.storage.local.set({ [CUSTOM_MESSAGE_KEY]: msgInput.value });
+        flashStatus("Saved ✓");
+      }, 400);
+    });
+
+    // Local focus stats: toggle + today/this-week summary.
+    const statsToggle = document.getElementById("proLocalStats");
+    const statsEl = document.getElementById("stats");
+    statsToggle.checked = proSettings.proLocalStats;
+    const renderStats = async () => {
+      statsEl.hidden = !statsToggle.checked;
+      if (statsEl.hidden) return;
+      const { [STATS_KEY]: stats } = await chrome.storage.local.get(STATS_KEY);
+      const { today, week } = summarizeStats(stats);
+      statsEl.textContent = `Feed opens blocked: ${today} today · ${week} this week`;
+    };
+    statsToggle.addEventListener("change", async () => {
+      await chrome.storage.local.set({ proLocalStats: statsToggle.checked });
+      renderStats();
+      flashStatus("Saved ✓");
+    });
+    renderStats();
   } else {
     proBadge.textContent = "Coming soon";
     upgrade.hidden = false;

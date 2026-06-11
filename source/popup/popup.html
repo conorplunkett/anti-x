@@ -38,10 +38,19 @@
 
       <fieldset id="pro" disabled>
         <h2>Pro <span class="badge" id="pro-badge">Coming soon</span></h2>
-        <label><input type="checkbox" id="proScheduledBlocking" /> Scheduled blocking (work hours only)</label>
-        <label><input type="checkbox" id="proKeywordMuting" /> Keyword / phrase muting</label>
         <label><input type="checkbox" id="proCustomMessage" /> Custom blocked-screen message</label>
+        <input
+          type="text"
+          id="proCustomMessageText"
+          class="text-input"
+          placeholder="e.g. Back to work."
+          maxlength="120"
+          hidden
+        />
         <label><input type="checkbox" id="proLocalStats" /> Local focus stats (never leaves your device)</label>
+        <p id="stats" class="stats" hidden></p>
+        <label class="stub"><input type="checkbox" id="proScheduledBlocking" disabled /> Scheduled blocking <span class="soon">soon</span></label>
+        <label class="stub"><input type="checkbox" id="proKeywordMuting" disabled /> Keyword / phrase muting <span class="soon">soon</span></label>
         <a id="upgrade" class="upgrade" href="#" hidden>Upgrade to Pro</a>
       </fieldset>
 

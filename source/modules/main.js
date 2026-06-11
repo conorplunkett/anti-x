@@ -1,15 +1,23 @@
 import {
   defaultSettings,
+  defaultProSettings,
   selectors,
   urls,
   moduleHeaderTexts,
   hide,
   unhideAll,
   loadSettings,
+  loadPro,
+  loadProSettings,
+  recordBlock,
+  PRO_KEY,
+  CUSTOM_MESSAGE_KEY,
+  STATS_KEY,
 } from "./lib.js";
 import { buildBlockedScreen, BLOCKED_SCREEN_ID } from "./blocked-screen.js";
 
 let settings = { ...defaultSettings };
+let pro = { isPro: false, ...defaultProSettings, [CUSTOM_MESSAGE_KEY]: "" };
 
 const textMatches = (el, needles) => {
   const text = (el?.textContent || "").trim().toLowerCase();
@@ -33,7 +41,11 @@ const blockTimeline = (title) => {
 
   if (!document.getElementById(BLOCKED_SCREEN_ID)) {
     const anchor = region?.parentElement || column;
-    anchor.appendChild(buildBlockedScreen(title));
+    const customText = (pro[CUSTOM_MESSAGE_KEY] || "").trim();
+    const message =
+      pro.isPro && pro.proCustomMessage && customText ? customText : undefined;
+    anchor.appendChild(buildBlockedScreen(title, message));
+    if (pro.isPro && pro.proLocalStats) recordBlock();
   }
 };
 
@@ -178,12 +190,25 @@ const onMutation = () => {
 
 async function main() {
   settings = await loadSettings();
+  pro = { isPro: await loadPro(), ...(await loadProSettings()) };
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
+    let changed = false;
     for (const [key, { newValue }] of Object.entries(changes)) {
-      settings[key] = newValue;
+      // Stats writes come from this script itself; reacting to them would
+      // rebuild the blocked screen and record again, looping forever.
+      if (key === STATS_KEY) continue;
+      if (key === PRO_KEY) {
+        pro.isPro = Boolean(newValue);
+      } else if (key in pro) {
+        pro[key] = newValue;
+      } else {
+        settings[key] = newValue;
+      }
+      changed = true;
     }
+    if (!changed) return;
     // Reset and re-apply so loosened settings take effect without a reload.
     unhideAll();
     removeBlockedScreen();

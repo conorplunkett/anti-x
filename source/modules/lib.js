@@ -23,6 +23,56 @@ export const loadPro = async () => {
   return Boolean(isPro);
 };
 
+// Pro feature toggles. Implemented: proCustomMessage, proLocalStats.
+// Still stubs: proScheduledBlocking, proKeywordMuting.
+export const defaultProSettings = {
+  proCustomMessage: false,
+  proLocalStats: true,
+  proScheduledBlocking: false,
+  proKeywordMuting: false,
+};
+
+export const proSettingsKeys = Object.keys(defaultProSettings);
+export const CUSTOM_MESSAGE_KEY = "proCustomMessageText";
+export const STATS_KEY = "blockStats";
+
+export const loadProSettings = async () => {
+  const stored = await chrome.storage.local.get([
+    ...proSettingsKeys,
+    CUSTOM_MESSAGE_KEY,
+  ]);
+  return {
+    ...defaultProSettings,
+    [CUSTOM_MESSAGE_KEY]: "",
+    ...stored,
+  };
+};
+
+// Local focus stats: a per-day counter of blocked feed opens. Stays entirely
+// in chrome.storage.local; pruned to the last 30 days.
+const dayKey = (d) => d.toISOString().slice(0, 10);
+
+export const recordBlock = async () => {
+  const { [STATS_KEY]: stats = {} } = await chrome.storage.local.get(STATS_KEY);
+  const today = dayKey(new Date());
+  stats[today] = (stats[today] || 0) + 1;
+  const cutoff = dayKey(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+  for (const k of Object.keys(stats)) {
+    if (k < cutoff) delete stats[k];
+  }
+  await chrome.storage.local.set({ [STATS_KEY]: stats });
+};
+
+export const summarizeStats = (stats = {}) => {
+  const today = dayKey(new Date());
+  const weekCutoff = dayKey(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+  let week = 0;
+  for (const [k, v] of Object.entries(stats)) {
+    if (k >= weekCutoff) week += v;
+  }
+  return { today: stats[today] || 0, week };
+};
+
 // Replace with your own donation link (Ko-fi, Buy Me a Coffee, GitHub Sponsors).
 export const DONATE_URL = "https://www.buymeacoffee.com/yourname";
 

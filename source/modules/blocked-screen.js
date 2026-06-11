@@ -10,7 +10,7 @@ const shortcuts = [
 ];
 
 // Builds the replacement screen shown instead of a blocked feed.
-export const buildBlockedScreen = (title) => {
+export const buildBlockedScreen = (title, message = "Use X intentionally.") => {
   const root = document.createElement("div");
   root.id = BLOCKED_SCREEN_ID;
   root.style.cssText =
@@ -22,7 +22,7 @@ export const buildBlockedScreen = (title) => {
   h1.style.cssText = "font-size:24px;font-weight:800;margin:0 0 8px;";
 
   const p = document.createElement("p");
-  p.textContent = "Use X intentionally.";
+  p.textContent = message;
   p.style.cssText = "font-size:15px;opacity:0.7;margin:0 0 28px;";
 
   const nav = document.createElement("div");
